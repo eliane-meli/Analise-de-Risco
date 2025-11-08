@@ -366,6 +366,7 @@
                     <tr>
                         <th>Pedido</th>
                         <th>Warehouse</th>
+                        <th>Destino</th>
                         <th>ETD</th>
                         <th>Tempo Restante</th>
                         <th>Status Atual</th>
@@ -394,7 +395,8 @@
         
         // Configuração da API do Google Sheets
         const SPREADSHEET_ID = '1wcas9ffZsb2MBm2dug0WUyYstKrGwTSBE1oPbz4pZjg';
-        const API_KEY = 'AIzaSyD6F5a2b6c7d8e9f0g1h2i3j4k5l6m7n8o9p0'; // Você precisará de uma chave API válida
+        const SHEET_NAME = 'Extração 1'; // Nome da aba da planilha
+        const API_KEY = 'AKfycbxUEMvNuhJTq6m3jyQDyGKQ-PV4TL5anLyNdaNqx7dYrVTj1dT4mKR8BxspJsaJEd3x'; // Você precisará de uma chave API válida
 
         document.addEventListener('DOMContentLoaded', function() {
             loadData();
@@ -425,19 +427,52 @@
                 applyFilters();
             } catch (error) {
                 showError('Erro ao carregar dados: ' + error.message);
+                // Em caso de erro, carregar dados mockados como fallback
+                console.log('Carregando dados mockados como fallback...');
+                const mockData = await mockFetchSheetData();
+                allOrders = processOrdersData(mockData);
+                updateDashboard(allOrders);
+                updateFilters(allOrders);
+                applyFilters();
             } finally {
                 showLoading(false);
             }
         }
 
-        // Função para buscar dados do Google Sheets
+        // Função para buscar dados reais do Google Sheets
         async function fetchSheetData() {
-            // Esta é uma implementação simulada - na prática você precisaria configurar a API do Google Sheets
-            // Para demonstração, vamos usar dados mockados
-            return await mockFetchSheetData();
+            // URL da API do Google Sheets para buscar dados
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`Erro na API: ${response.status} - ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            // Converter os dados da planilha em um formato estruturado
+            if (!data.values || data.values.length === 0) {
+                throw new Error('Nenhum dado encontrado na planilha');
+            }
+            
+            const headers = data.values[0]; // Primeira linha são os cabeçalhos
+            const rows = data.values.slice(1); // Restante são os dados
+            
+            // Mapear as linhas para objetos usando os cabeçalhos
+            const structuredData = rows.map(row => {
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = row[index] || '';
+                });
+                return obj;
+            });
+            
+            return structuredData;
         }
 
-        // Função mock para simular dados da planilha
+        // Função mock para simular dados da planilha (fallback)
         async function mockFetchSheetData() {
             return new Promise((resolve) => {
                 setTimeout(() => {
@@ -445,6 +480,7 @@
                     const mockData = [];
                     const statuses = ['PICKING', 'PACKING', 'DISPATCH', 'COMPLETED', 'CANCELED'];
                     const warehouses = ['SP01', 'SP02', 'RJ01', 'MG01'];
+                    const destinations = ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Curitiba', 'Porto Alegre', 'Salvador'];
                     
                     for (let i = 1; i <= 200; i++) {
                         const randomDays = Math.floor(Math.random() * 10) - 2; // -2 a 7 dias
@@ -454,6 +490,7 @@
                         const order = {
                             WAREHOUSE: warehouses[Math.floor(Math.random() * warehouses.length)],
                             PEDIDO: `PED${1000 + i}`,
+                            DESTINO: destinations[Math.floor(Math.random() * destinations.length)],
                             WAVE_ID: `WAVE${Math.floor(Math.random() * 50) + 1}`,
                             STATUS_PEDIDO: statuses[Math.floor(Math.random() * statuses.length)],
                             DT_ETD: etd.toISOString().split('T')[0],
@@ -504,6 +541,7 @@
                 return {
                     id: order.PEDIDO,
                     warehouse: order.WAREHOUSE,
+                    destination: order.DESTINO || 'Não informado',
                     etd: order.DT_ETD,
                     horaEtd: order.HORA_ETD,
                     remainingTime: formatRemainingTime(hoursRemaining),
@@ -641,6 +679,7 @@
         function updateFilters(orders) {
             const warehouses = [...new Set(orders.map(o => o.warehouse))];
             const statuses = [...new Set(orders.map(o => o.status))];
+            const destinations = [...new Set(orders.map(o => o.destination))];
             
             const warehouseFilter = document.getElementById('warehouse-filter');
             const statusFilter = document.getElementById('status-filter');
@@ -710,6 +749,7 @@
                 row.innerHTML = `
                     <td>${order.id}</td>
                     <td>${order.warehouse}</td>
+                    <td>${order.destination}</td>
                     <td>${order.etd} ${order.horaEtd}</td>
                     <td>${order.remainingTime}</td>
                     <td>${order.status}</td>
@@ -761,10 +801,11 @@
 
         // Converter para CSV
         function convertToCSV(orders) {
-            const headers = ['Pedido', 'Warehouse', 'ETD', 'Tempo Restante', 'Status', 'Progresso', 'Risco'];
+            const headers = ['Pedido', 'Warehouse', 'Destino', 'ETD', 'Tempo Restante', 'Status', 'Progresso', 'Risco'];
             const rows = orders.map(order => [
                 order.id,
                 order.warehouse,
+                order.destination,
                 order.etd,
                 order.remainingTime,
                 order.status,
@@ -792,6 +833,7 @@
             if (order) {
                 alert(`Detalhes do Pedido ${orderId}:
 Warehouse: ${order.warehouse}
+Destino: ${order.destination}
 ETD: ${order.etd} ${order.horaEtd}
 Status: ${order.status}
 Risco SLA: ${order.riskText}
