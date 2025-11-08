@@ -320,8 +320,8 @@
 
             <div class="filters">
                 <div class="filter-item">
-                    <label for="warehouse-filter">Armazém</label>
-                    <select id="warehouse-filter">
+                    <label for="Destino-filter">Armazém</label>
+                    <select id="Destino-filter">
                         <option value="all">Todos os Armazéns</option>
                     </select>
                 </div>
@@ -365,7 +365,7 @@
                 <thead>
                     <tr>
                         <th>Pedido</th>
-                        <th>Warehouse</th>
+                        <th>Destino</th>
                         <th>Destino</th>
                         <th>ETD</th>
                         <th>Tempo Restante</th>
@@ -409,7 +409,7 @@
             
             // Configurar filtros em tempo real
             document.getElementById('search').addEventListener('input', applyFilters);
-            document.getElementById('warehouse-filter').addEventListener('change', applyFilters);
+            document.getElementById('Destino-filter').addEventListener('change', applyFilters);
             document.getElementById('status-filter').addEventListener('change', applyFilters);
             document.getElementById('risk-filter').addEventListener('change', applyFilters);
             document.getElementById('time-filter').addEventListener('change', applyFilters);
@@ -479,7 +479,7 @@
                     // Dados de exemplo baseados na estrutura da planilha
                     const mockData = [];
                     const statuses = ['PICKING', 'PACKING', 'DISPATCH', 'COMPLETED', 'CANCELED'];
-                    const warehouses = ['SP01', 'SP02', 'RJ01', 'MG01'];
+                    const Destinos = ['SP01', 'SP02', 'RJ01', 'MG01'];
                     const destinations = ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Curitiba', 'Porto Alegre', 'Salvador'];
                     
                     for (let i = 1; i <= 200; i++) {
@@ -488,7 +488,7 @@
                         etd.setDate(etd.getDate() + randomDays);
                         
                         const order = {
-                            WAREHOUSE: warehouses[Math.floor(Math.random() * warehouses.length)],
+                            DESTINOS: destinos[Math.floor(Math.random() * destinos.length)],
                             PEDIDO: `PED${1000 + i}`,
                             DESTINO: destinations[Math.floor(Math.random() * destinations.length)],
                             WAVE_ID: `WAVE${Math.floor(Math.random() * 50) + 1}`,
@@ -540,7 +540,7 @@
                 
                 return {
                     id: order.PEDIDO,
-                    warehouse: order.WAREHOUSE,
+                    Destino: order.DESTINO,
                     destination: order.DESTINO || 'Não informado',
                     etd: order.DT_ETD,
                     horaEtd: order.HORA_ETD,
@@ -609,34 +609,34 @@
                 }
             });
 
-            // Gráfico 2: Risco por Warehouse
-            const warehouseRisk = {};
+            // Gráfico 2: Risco por destino
+            const destinoRisk = {};
             orders.forEach(order => {
-                if (!warehouseRisk[order.warehouse]) {
-                    warehouseRisk[order.warehouse] = { high: 0, medium: 0, low: 0 };
+                if (!destinoRisk[order.destino]) {
+                    destinoRisk[order.destino] = { high: 0, medium: 0, low: 0 };
                 }
-                warehouseRisk[order.warehouse][order.riskLevel]++;
+                destinoRisk[order.destino][order.riskLevel]++;
             });
 
             const riskCtx = document.getElementById('riskChart').getContext('2d');
             riskChart = new Chart(riskCtx, {
                 type: 'bar',
                 data: {
-                    labels: Object.keys(warehouseRisk),
+                    labels: Object.keys(destinoRisk),
                     datasets: [
                         {
                             label: 'Risco Alto',
-                            data: Object.values(warehouseRisk).map(w => w.high),
+                            data: Object.values(destinoRisk).map(w => w.high),
                             backgroundColor: '#e74c3c'
                         },
                         {
                             label: 'Risco Médio',
-                            data: Object.values(warehouseRisk).map(w => w.medium),
+                            data: Object.values(destinoRisk).map(w => w.medium),
                             backgroundColor: '#f39c12'
                         },
                         {
                             label: 'Risco Baixo',
-                            data: Object.values(warehouseRisk).map(w => w.low),
+                            data: Object.values(destinoRisk).map(w => w.low),
                             backgroundColor: '#2ecc71'
                         }
                     ]
@@ -677,17 +677,17 @@
 
         // Atualizar opções dos filtros
         function updateFilters(orders) {
-            const warehouses = [...new Set(orders.map(o => o.warehouse))];
+            const destinos = [...new Set(orders.map(o => o.destino))];
             const statuses = [...new Set(orders.map(o => o.status))];
             const destinations = [...new Set(orders.map(o => o.destination))];
             
-            const warehouseFilter = document.getElementById('warehouse-filter');
+            const destinoFilter = document.getElementById('destino-filter');
             const statusFilter = document.getElementById('status-filter');
             
-            // Atualizar filtro de warehouses
-            warehouseFilter.innerHTML = '<option value="all">Todos os Armazéns</option>';
-            warehouses.forEach(wh => {
-                warehouseFilter.innerHTML += `<option value="${wh}">${wh}</option>`;
+            // Atualizar filtro de destinos
+           destinoFilter.innerHTML = '<option value="all">Todos os Armazéns</option>';
+            destinos.forEach(wh => {
+                destinoFilter.innerHTML += `<option value="${wh}">${wh}</option>`;
             });
             
             // Atualizar filtro de status
@@ -699,15 +699,15 @@
 
         // Aplicar filtros
         function applyFilters() {
-            const warehouse = document.getElementById('warehouse-filter').value;
+            const destino = document.getElementById('destino-filter').value;
             const status = document.getElementById('status-filter').value;
             const risk = document.getElementById('risk-filter').value;
             const time = document.getElementById('time-filter').value;
             const search = document.getElementById('search').value.toLowerCase();
             
             let filteredOrders = allOrders.filter(order => {
-                // Filtro por warehouse
-                if (warehouse !== 'all' && order.warehouse !== warehouse) return false;
+                // Filtro por destino
+                if (destino !== 'all' && order.destino !== destino) return false;
                 
                 // Filtro por status
                 if (status !== 'all' && order.status !== status) return false;
@@ -748,7 +748,7 @@
                 
                 row.innerHTML = `
                     <td>${order.id}</td>
-                    <td>${order.warehouse}</td>
+                    <td>${order.destino}</td>
                     <td>${order.destination}</td>
                     <td>${order.etd} ${order.horaEtd}</td>
                     <td>${order.remainingTime}</td>
@@ -780,7 +780,7 @@
         // Exportar dados
         function exportData() {
             const filters = {
-                warehouse: document.getElementById('warehouse-filter').value,
+                destino: document.getElementById('destino-filter').value,
                 status: document.getElementById('status-filter').value,
                 risk: document.getElementById('risk-filter').value,
                 time: document.getElementById('time-filter').value,
@@ -788,7 +788,7 @@
             };
             
             let filteredOrders = allOrders.filter(order => {
-                if (filters.warehouse !== 'all' && order.warehouse !== filters.warehouse) return false;
+                if (filters.destino !== 'all' && order.destino !== filters.destino) return false;
                 if (filters.status !== 'all' && order.status !== filters.status) return false;
                 if (filters.risk !== 'all' && order.riskLevel !== filters.risk) return false;
                 if (filters.search && !order.id.toLowerCase().includes(filters.search.toLowerCase())) return false;
@@ -801,10 +801,10 @@
 
         // Converter para CSV
         function convertToCSV(orders) {
-            const headers = ['Pedido', 'Warehouse', 'Destino', 'ETD', 'Tempo Restante', 'Status', 'Progresso', 'Risco'];
+            const headers = ['Pedido', 'destino', 'Destino', 'ETD', 'Tempo Restante', 'Status', 'Progresso', 'Risco'];
             const rows = orders.map(order => [
                 order.id,
-                order.warehouse,
+                order.destino,
                 order.destination,
                 order.etd,
                 order.remainingTime,
@@ -832,7 +832,7 @@
             const order = allOrders.find(o => o.id === orderId);
             if (order) {
                 alert(`Detalhes do Pedido ${orderId}:
-Warehouse: ${order.warehouse}
+destino: ${order.destino}
 Destino: ${order.destination}
 ETD: ${order.etd} ${order.horaEtd}
 Status: ${order.status}
