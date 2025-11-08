@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Logística e SLA</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .description {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        .sheets-url {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sheets-url a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .sheets-url a:hover {
+            text-decoration: underline;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+        .card.high-risk {
+            border-left-color: #e74c3c;
+        }
+        .card.medium-risk {
+            border-left-color: #f39c12;
+        }
+        .card.low-risk {
+            border-left-color: #2ecc71;
+        }
+        .card-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #2c3e50;
+        }
+        .card-title {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+        }
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .chart-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        .chart-title {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover {
+            background-color: #f5f7f9;
+        }
+        .risk-high {
+            background-color: #ffebee;
+            color: #e74c3c;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .risk-medium {
+            background-color: #fff8e1;
+            color: #f39c12;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .risk-low {
+            background-color: #e8f5e9;
+            color: #2ecc71;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            border-radius: 4px;
+            background-color: #3498db;
+        }
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-item label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #7f8c8d;
+        }
+        select, input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        .btn-secondary {
+            background-color: #ecf0f1;
+            color: #7f8c8d;
+        }
+        .btn-secondary:hover {
+            background-color: #dfe6e9;
+        }
+        .btn-sheets {
+            background-color: #0f9d58;
+            color: white;
+        }
+        .btn-sheets:hover {
+            background-color: #0b8047;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 1024px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            .filters {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gestão de Logística e Cumprimento de SLA</h1>
+            <p class="description">Monitoramento de pedidos e análise de riscos em tempo real</p>
+            
+            <div class="sheets-url">
+                <div>
+                    <strong>Planilha Google Sheets integrada:</strong>
+                    <a id="spreadsheet-url" href="https://docs.google.com/spreadsheets/d/1wcas9ffZsb2MBm2dug0WUyYstKrGwTSBE1oPbz4pZjg/edit?gid=1266870261#gid=1266870261" target="_blank">
+                        https://docs.google.com/spreadsheets/d/1wcas9ffZsb2MBm2dug0WUyYstKrGwTSBE1oPbz4pZjg
+                    </a>
+                </div>
+                <button class="btn-sheets" id="sync-data">Sincronizar Dados</button>
+            </div>
+        </header>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Carregando dados...</p>
+        </div>
+
+        <div id="dashboard-content">
+            <div class="dashboard">
+                <div class="card high-risk">
+                    <div class="card-title">Pedidos em Risco Alto</div>
+                    <div class="card-value" id="high-risk-count">0</div>
+                    <div>Necessitam atenção imediata</div>
+                </div>
+                <div class="card medium-risk">
+                    <div class="card-title">Pedidos em Risco Médio</div>
+                    <div class="card-value" id="medium-risk-count">0</div>
+                    <div>Monitorar de perto</div>
+                </div>
+                <div class="card low-risk">
+                    <div class="card-title">No Prazo</div>
+                    <div class="card-value" id="low-risk-count">0</div>
+                    <div>Dentro do SLA</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Taxa de Cumprimento</div>
+                    <div class="card-value" id="compliance-rate">0%</div>
+                    <div>Meta: 95%</div>
+                </div>
+            </div>
+
+            <div class="charts-container">
+                <div class="chart-card">
+                    <div class="chart-title">Distribuição de Pedidos por Status</div>
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Risco de SLA por Estágio</div>
+                    <canvas id="riskChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Tendência de Cumprimento de SLA</div>
+                    <canvas id="trendChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Pedidos Atrasados vs. No Prazo</div>
+                    <canvas id="complianceChart"></canvas>
+                </div>
+            </div>
+
+            <div class="filters">
+                <div class="filter-item">
+                    <label for="warehouse-filter">Armazém</label>
+                    <select id="warehouse-filter">
+                        <option value="all">Todos os Armazéns</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="status-filter">Status</label>
+                    <select id="status-filter">
+                        <option value="all">Todos os Status</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="risk-filter">Nível de Risco</label>
+                    <select id="risk-filter">
+                        <option value="all">Todos os Riscos</option>
+                        <option value="high">Risco Alto</option>
+                        <option value="medium">Risco Médio</option>
+                        <option value="low">Risco Baixo</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="time-filter">Tempo Restante</label>
+                    <select id="time-filter">
+                        <option value="all">Qualquer Tempo</option>
+                        <option value="urgent">Menos de 2h</option>
+                        <option value="critical">Menos de 6h</option>
+                        <option value="warning">Menos de 12h</option>
+                        <option value="safe">Mais de 12h</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="search">Pesquisar</label>
+                    <input type="text" id="search" placeholder="Nº do pedido...">
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn-secondary" id="export-data">Exportar Dados</button>
+                <button class="btn-primary" id="apply-filters">Aplicar Filtros</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Pedido</th>
+                        <th>Warehouse</th>
+                        <th>ETD</th>
+                        <th>Tempo Restante</th>
+                        <th>Status Atual</th>
+                        <th>Progresso</th>
+                        <th>Risco SLA</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-table-body">
+                    <!-- Os dados serão preenchidos via JavaScript -->
+                </tbody>
+            </table>
+
+            <div class="actions">
+                <button class="btn-secondary" id="load-more">Carregar mais pedidos</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let statusChart, riskChart, trendChart, complianceChart;
+        let allOrders = [];
+        let currentPage = 1;
+        const ordersPerPage = 50;
+        
+        // Configuração da API do Google Sheets
+        const SPREADSHEET_ID = '1wcas9ffZsb2MBm2dug0WUyYstKrGwTSBE1oPbz4pZjg';
+        const API_KEY = 'AIzaSyD6F5a2b6c7d8e9f0g1h2i3j4k5l6m7n8o9p0'; // Você precisará de uma chave API válida
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            
+            // Configurar event listeners
+            document.getElementById('sync-data').addEventListener('click', loadData);
+            document.getElementById('apply-filters').addEventListener('click', applyFilters);
+            document.getElementById('export-data').addEventListener('click', exportData);
+            document.getElementById('load-more').addEventListener('click', loadMoreData);
+            
+            // Configurar filtros em tempo real
+            document.getElementById('search').addEventListener('input', applyFilters);
+            document.getElementById('warehouse-filter').addEventListener('change', applyFilters);
+            document.getElementById('status-filter').addEventListener('change', applyFilters);
+            document.getElementById('risk-filter').addEventListener('change', applyFilters);
+            document.getElementById('time-filter').addEventListener('change', applyFilters);
+        });
+
+        // Função principal para carregar dados
+        async function loadData() {
+            showLoading(true);
+            
+            try {
+                const data = await fetchSheetData();
+                allOrders = processOrdersData(data);
+                updateDashboard(allOrders);
+                updateFilters(allOrders);
+                applyFilters();
+            } catch (error) {
+                showError('Erro ao carregar dados: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Função para buscar dados do Google Sheets
+        async function fetchSheetData() {
+            // Esta é uma implementação simulada - na prática você precisaria configurar a API do Google Sheets
+            // Para demonstração, vamos usar dados mockados
+            return await mockFetchSheetData();
+        }
+
+        // Função mock para simular dados da planilha
+        async function mockFetchSheetData() {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Dados de exemplo baseados na estrutura da planilha
+                    const mockData = [];
+                    const statuses = ['PICKING', 'PACKING', 'DISPATCH', 'COMPLETED', 'CANCELED'];
+                    const warehouses = ['SP01', 'SP02', 'RJ01', 'MG01'];
+                    
+                    for (let i = 1; i <= 200; i++) {
+                        const randomDays = Math.floor(Math.random() * 10) - 2; // -2 a 7 dias
+                        const etd = new Date();
+                        etd.setDate(etd.getDate() + randomDays);
+                        
+                        const order = {
+                            WAREHOUSE: warehouses[Math.floor(Math.random() * warehouses.length)],
+                            PEDIDO: `PED${1000 + i}`,
+                            WAVE_ID: `WAVE${Math.floor(Math.random() * 50) + 1}`,
+                            STATUS_PEDIDO: statuses[Math.floor(Math.random() * statuses.length)],
+                            DT_ETD: etd.toISOString().split('T')[0],
+                            HORA_ETD: '18:00',
+                            DT_PICKING_START: randomDays > 0 ? new Date().toISOString().split('T')[0] : '',
+                            DT_PICKING_FINISH: randomDays > 2 ? new Date().toISOString().split('T')[0] : '',
+                            DT_PACKING_FINISH: randomDays > 3 ? new Date().toISOString().split('T')[0] : '',
+                            SLA_OUT: randomDays > 0 ? 'DENTRO_SLA' : 'FORA_SLA'
+                        };
+                        mockData.push(order);
+                    }
+                    resolve(mockData);
+                }, 1000);
+            });
+        }
+
+        // Processar dados dos pedidos
+        function processOrdersData(data) {
+            return data.map(order => {
+                const now = new Date();
+                const etdDateTime = new Date(`${order.DT_ETD} ${order.HORA_ETD}`);
+                
+                // Calcular tempo restante
+                const timeDiff = etdDateTime.getTime() - now.getTime();
+                const hoursRemaining = timeDiff / (1000 * 60 * 60);
+                
+                // Determinar risco de SLA
+                let riskLevel = 'low';
+                let riskText = 'Dentro do Prazo';
+                
+                if (hoursRemaining < 2) {
+                    riskLevel = 'high';
+                    riskText = 'Crítico';
+                } else if (hoursRemaining < 6) {
+                    riskLevel = 'medium';
+                    riskText = 'Atenção';
+                } else if (hoursRemaining < 0) {
+                    riskLevel = 'high';
+                    riskText = 'Atrasado';
+                }
+                
+                // Calcular progresso baseado nos estágios concluídos
+                let progress = 0;
+                if (order.DT_PICKING_FINISH) progress += 40;
+                if (order.DT_PACKING_FINISH) progress += 40;
+                if (order.SLA_OUT === 'DENTRO_SLA') progress += 20;
+                
+                return {
+                    id: order.PEDIDO,
+                    warehouse: order.WAREHOUSE,
+                    etd: order.DT_ETD,
+                    horaEtd: order.HORA_ETD,
+                    remainingTime: formatRemainingTime(hoursRemaining),
+                    hoursRemaining: hoursRemaining,
+                    status: order.STATUS_PEDIDO,
+                    progress: progress,
+                    riskLevel: riskLevel,
+                    riskText: riskText,
+                    waveId: order.WAVE_ID,
+                    slaStatus: order.SLA_OUT,
+                    rawData: order
+                };
+            });
+        }
+
+        // Formatador de tempo restante
+        function formatRemainingTime(hours) {
+            if (hours < 0) {
+                const absHours = Math.abs(hours);
+                return `Atrasado: ${Math.floor(absHours)}h ${Math.floor((absHours % 1) * 60)}m`;
+            }
+            return `${Math.floor(hours)}h ${Math.floor((hours % 1) * 60)}m`;
+        }
+
+        // Atualizar dashboard com estatísticas
+        function updateDashboard(orders) {
+            const highRisk = orders.filter(o => o.riskLevel === 'high').length;
+            const mediumRisk = orders.filter(o => o.riskLevel === 'medium').length;
+            const lowRisk = orders.filter(o => o.riskLevel === 'low').length;
+            const totalOrders = orders.length;
+            const complianceRate = totalOrders > 0 ? 
+                Math.round((lowRisk / totalOrders) * 100) : 0;
+
+            document.getElementById('high-risk-count').textContent = highRisk;
+            document.getElementById('medium-risk-count').textContent = mediumRisk;
+            document.getElementById('low-risk-count').textContent = lowRisk;
+            document.getElementById('compliance-rate').textContent = complianceRate + '%';
+
+            updateCharts(orders);
+        }
+
+        // Atualizar gráficos
+        function updateCharts(orders) {
+            // Destruir gráficos existentes
+            if (statusChart) statusChart.destroy();
+            if (riskChart) riskChart.destroy();
+            if (trendChart) trendChart.destroy();
+            if (complianceChart) complianceChart.destroy();
+
+            // Gráfico 1: Distribuição por Status
+            const statusCounts = {};
+            orders.forEach(order => {
+                statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+            });
+
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(statusCounts),
+                    datasets: [{
+                        data: Object.values(statusCounts),
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+                    }]
+                }
+            });
+
+            // Gráfico 2: Risco por Warehouse
+            const warehouseRisk = {};
+            orders.forEach(order => {
+                if (!warehouseRisk[order.warehouse]) {
+                    warehouseRisk[order.warehouse] = { high: 0, medium: 0, low: 0 };
+                }
+                warehouseRisk[order.warehouse][order.riskLevel]++;
+            });
+
+            const riskCtx = document.getElementById('riskChart').getContext('2d');
+            riskChart = new Chart(riskCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(warehouseRisk),
+                    datasets: [
+                        {
+                            label: 'Risco Alto',
+                            data: Object.values(warehouseRisk).map(w => w.high),
+                            backgroundColor: '#e74c3c'
+                        },
+                        {
+                            label: 'Risco Médio',
+                            data: Object.values(warehouseRisk).map(w => w.medium),
+                            backgroundColor: '#f39c12'
+                        },
+                        {
+                            label: 'Risco Baixo',
+                            data: Object.values(warehouseRisk).map(w => w.low),
+                            backgroundColor: '#2ecc71'
+                        }
+                    ]
+                }
+            });
+
+            // Gráfico 3: Tendência (simulado)
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                    datasets: [{
+                        label: 'Taxa de Cumprimento (%)',
+                        data: [85, 88, 92, 90, 87, 94, 96],
+                        borderColor: '#3498db',
+                        tension: 0.1
+                    }]
+                }
+            });
+
+            // Gráfico 4: Compliance
+            const complianceCtx = document.getElementById('complianceChart').getContext('2d');
+            complianceChart = new Chart(complianceCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Dentro do SLA', 'Fora do SLA'],
+                    datasets: [{
+                        data: [
+                            orders.filter(o => o.slaStatus === 'DENTRO_SLA').length,
+                            orders.filter(o => o.slaStatus !== 'DENTRO_SLA').length
+                        ],
+                        backgroundColor: ['#2ecc71', '#e74c3c']
+                    }]
+                }
+            });
+        }
+
+        // Atualizar opções dos filtros
+        function updateFilters(orders) {
+            const warehouses = [...new Set(orders.map(o => o.warehouse))];
+            const statuses = [...new Set(orders.map(o => o.status))];
+            
+            const warehouseFilter = document.getElementById('warehouse-filter');
+            const statusFilter = document.getElementById('status-filter');
+            
+            // Atualizar filtro de warehouses
+            warehouseFilter.innerHTML = '<option value="all">Todos os Armazéns</option>';
+            warehouses.forEach(wh => {
+                warehouseFilter.innerHTML += `<option value="${wh}">${wh}</option>`;
+            });
+            
+            // Atualizar filtro de status
+            statusFilter.innerHTML = '<option value="all">Todos os Status</option>';
+            statuses.forEach(status => {
+                statusFilter.innerHTML += `<option value="${status}">${status}</option>`;
+            });
+        }
+
+        // Aplicar filtros
+        function applyFilters() {
+            const warehouse = document.getElementById('warehouse-filter').value;
+            const status = document.getElementById('status-filter').value;
+            const risk = document.getElementById('risk-filter').value;
+            const time = document.getElementById('time-filter').value;
+            const search = document.getElementById('search').value.toLowerCase();
+            
+            let filteredOrders = allOrders.filter(order => {
+                // Filtro por warehouse
+                if (warehouse !== 'all' && order.warehouse !== warehouse) return false;
+                
+                // Filtro por status
+                if (status !== 'all' && order.status !== status) return false;
+                
+                // Filtro por risco
+                if (risk !== 'all' && order.riskLevel !== risk) return false;
+                
+                // Filtro por tempo
+                if (time !== 'all') {
+                    if (time === 'urgent' && order.hoursRemaining >= 2) return false;
+                    if (time === 'critical' && (order.hoursRemaining >= 6 || order.hoursRemaining < 2)) return false;
+                    if (time === 'warning' && (order.hoursRemaining >= 12 || order.hoursRemaining < 6)) return false;
+                    if (time === 'safe' && order.hoursRemaining < 12) return false;
+                }
+                
+                // Filtro por pesquisa
+                if (search && !order.id.toLowerCase().includes(search)) return false;
+                
+                return true;
+            });
+            
+            currentPage = 1;
+            updateOrdersTable(filteredOrders);
+            updateDashboard(filteredOrders);
+        }
+
+        // Atualizar tabela de pedidos
+        function updateOrdersTable(orders) {
+            const tableBody = document.getElementById('orders-table-body');
+            const startIndex = (currentPage - 1) * ordersPerPage;
+            const endIndex = startIndex + ordersPerPage;
+            const pageOrders = orders.slice(startIndex, endIndex);
+            
+            tableBody.innerHTML = '';
+            
+            pageOrders.forEach(order => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${order.id}</td>
+                    <td>${order.warehouse}</td>
+                    <td>${order.etd} ${order.horaEtd}</td>
+                    <td>${order.remainingTime}</td>
+                    <td>${order.status}</td>
+                    <td>
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${order.progress}%"></div>
+                        </div>
+                        ${order.progress}%
+                    </td>
+                    <td><span class="risk-${order.riskLevel}">${order.riskText}</span></td>
+                    <td><button class="btn-primary" onclick="showOrderDetails('${order.id}')">Detalhes</button></td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Mostrar/ocultar botão de carregar mais
+            document.getElementById('load-more').style.display = 
+                endIndex < orders.length ? 'block' : 'none';
+        }
+
+        // Carregar mais dados
+        function loadMoreData() {
+            currentPage++;
+            applyFilters();
+        }
+
+        // Exportar dados
+        function exportData() {
+            const filters = {
+                warehouse: document.getElementById('warehouse-filter').value,
+                status: document.getElementById('status-filter').value,
+                risk: document.getElementById('risk-filter').value,
+                time: document.getElementById('time-filter').value,
+                search: document.getElementById('search').value
+            };
+            
+            let filteredOrders = allOrders.filter(order => {
+                if (filters.warehouse !== 'all' && order.warehouse !== filters.warehouse) return false;
+                if (filters.status !== 'all' && order.status !== filters.status) return false;
+                if (filters.risk !== 'all' && order.riskLevel !== filters.risk) return false;
+                if (filters.search && !order.id.toLowerCase().includes(filters.search.toLowerCase())) return false;
+                return true;
+            });
+            
+            const csvContent = convertToCSV(filteredOrders);
+            downloadCSV(csvContent, 'dados_sla.csv');
+        }
+
+        // Converter para CSV
+        function convertToCSV(orders) {
+            const headers = ['Pedido', 'Warehouse', 'ETD', 'Tempo Restante', 'Status', 'Progresso', 'Risco'];
+            const rows = orders.map(order => [
+                order.id,
+                order.warehouse,
+                order.etd,
+                order.remainingTime,
+                order.status,
+                order.progress + '%',
+                order.riskText
+            ]);
+            
+            return [headers, ...rows].map(row => row.join(',')).join('\n');
+        }
+
+        // Download CSV
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Mostrar detalhes do pedido
+        function showOrderDetails(orderId) {
+            const order = allOrders.find(o => o.id === orderId);
+            if (order) {
+                alert(`Detalhes do Pedido ${orderId}:
+Warehouse: ${order.warehouse}
+ETD: ${order.etd} ${order.horaEtd}
+Status: ${order.status}
+Risco SLA: ${order.riskText}
+Tempo Restante: ${order.remainingTime}
+Progresso: ${order.progress}%`);
+            }
+        }
+
+        // Mostrar/ocultar loading
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('dashboard-content').style.display = show ? 'none' : 'block';
+        }
+
+        // Mostrar erro
+        function showError(message) {
+            showLoading(false);
+            alert('Erro: ' + message);
+            console.error(message);
+        }
+    </script>
+</body>
+</html>
